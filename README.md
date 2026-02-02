@@ -2,6 +2,10 @@
 
 Following Phil's blog on implementing MVCC to understand different isolation levels.
 
+While implementing and reading the blog, I just thought I about this
+> MVCC is just like putting git into the database—David
+
+It might not be fully correct, but yeah, I hope you get the point.
 
 ## Engineering Blogs
 * [Datadog's Replication Journey - singular to multi-tenant](https://www.datadoghq.com/blog/engineering/cdc-replication-search/)

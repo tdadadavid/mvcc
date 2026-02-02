@@ -46,10 +46,13 @@ type Transaction struct {
 type Database struct {
 	// Except changed all transactions will have the same isolation level.
 	DefaultIsolationLevel IsolationLevel
-	Store                 map[uint64][]Value
-	Transactions          btree.Map[uint64, *Transaction]
-	State                 TransactionState
-	NextTransactionID     uint64
+
+	// Store is a map tracking a key to an array of values, where the most
+	// recent or latest value is stored at the end of the array
+	Store             map[string][]Value
+	Transactions      btree.Map[uint64, *Transaction]
+	State             TransactionState
+	NextTransactionID uint64
 
 	// locks to control
 	mu sync.Mutex
@@ -58,7 +61,7 @@ type Database struct {
 func NewDatabase() *Database {
 	return &Database{
 		DefaultIsolationLevel: ReadCommittedIsolationLevel,
-		Store:                 map[uint64][]Value{},
+		Store:                 map[string][]Value{},
 		NextTransactionID:     1,
 		mu:                    sync.Mutex{},
 	}
@@ -85,7 +88,7 @@ func (db *Database) NewTransaction() *Transaction {
 	return txn
 }
 
-func (db *Database) UpdateTransaction(txn *Transaction, value TransactionState) error {
+func (db *Database) CompleteTransaction(txn *Transaction, value TransactionState) error {
 	db.mu.Lock()
 	defer db.mu.Unlock()
 
@@ -95,6 +98,10 @@ func (db *Database) UpdateTransaction(txn *Transaction, value TransactionState) 
 	debug("updated transaction to:", txn.State, "for txn:", txn.ID)
 
 	return nil
+}
+
+func (db *Database) IsVisible(txn *Transaction, value Value) (isVisible bool) {
+	return isVisible
 }
 
 func (db *Database) GetTransactionState(id uint64) *Transaction {
