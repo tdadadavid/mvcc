@@ -11,6 +11,8 @@ var (
 	ABORT  Command = "ABORT"
 	COMMIT Command = "COMMIT"
 	GET    Command = "GET"
+	SET    Command = "SET"
+	DELETE Command = "DELETE"
 )
 
 // Connection models a client connection to the database
@@ -52,7 +54,7 @@ func (c *Connection) execCommand(command string, args []string) (string, error) 
 
 		c.txn.ReadSet.Insert(key) // track the key in the read set (used by snapshot and serializable isolation level)
 
-		// check if key exists in a database
+		// check if the key exists in a database
 		values := c.db.Store[key]
 		if values == nil {
 			return "", fmt.Errorf("key %s not found", key)
@@ -60,9 +62,34 @@ func (c *Connection) execCommand(command string, args []string) (string, error) 
 
 		for i := len(values) - 1; i >= 0; i-- {
 			value := values[i]
-			debug(value, c.txn, "isVisible=", c.db.IsVisible(c.txn, value))
-			if c.db.IsVisible(c.txn, value) {
+			debug(value, c.txn, "isVisible=", c.db.IsVisible(c.txn, &value))
+			if c.db.IsVisible(c.txn, &value) {
 				return value.value, nil
+			}
+		}
+
+	}
+
+	if command == SET.String() || command == DELETE.String() {
+		c.db.assertValidTransaction(c.txn) // validate the transaction within this connection is valid
+
+		key := args[0]
+		input := args[1]
+
+		values := c.db.Store[key]
+		if values == nil {
+			return "", fmt.Errorf("key %s not found", key)
+		}
+
+		// mark all values visible to this transaction invalid (stale)
+		found := false
+		for i := len(values) - 1; i >= 0; i-- {
+			value := values[i]
+			if c.db.IsVisible(c.txn, &value) {
+				// mark the value as stale by setting the transaction end id, meaning that this particular
+				// value became stale during this transaction process
+				value.txnEndId = c.txn.ID
+				found = true
 			}
 		}
 

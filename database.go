@@ -100,7 +100,7 @@ func (db *Database) CompleteTransaction(txn *Transaction, value TransactionState
 	return nil
 }
 
-func (db *Database) IsVisible(txn *Transaction, value Value) (isVisible bool) {
+func (db *Database) IsVisible(txn *Transaction, value *Value) (isVisible bool) {
 	return isVisible
 }
 
